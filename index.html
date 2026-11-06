@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>資訊科技如何改變生活帶來挑戰</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap');
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            background-color: #f0fdfa; /* Tailwind teal-50 */
+            touch-action: manipulation; /* Disable double-tap zoom */
+        }
+        .app-container {
+            width: 100%;
+            max-width: 1024px;
+            margin: 0 auto;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            background-color: #ffffff;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            overflow: hidden;
+        }
+        /* Hide all sections by default */
+        .screen { display: none; }
+        .screen.active { display: flex; flex-direction: column; flex: 1; }
+        
+        .btn {
+            min-height: 48px;
+            transition: transform 0.1s ease, box-shadow 0.1s ease;
+        }
+        .btn:active {
+            transform: scale(0.96);
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);
+        }
+        
+        .fade-in { animation: fadeIn 0.3s ease-in-out; }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="text-gray-800 antialiased selection:bg-teal-200">
+
+    <div class="app-container relative">
+        
+        <!-- 1. 登入畫面 -->
+        <div id="login-screen" class="screen active justify-center items-center p-6 bg-teal-50">
+            <div class="bg-white p-8 rounded-2xl shadow-lg w-full max-w-md text-center fade-in">
+                <div class="text-5xl mb-4">💻</div>
+                <h1 class="text-2xl font-bold text-teal-700 mb-2">資訊科技如何改變生活</h1>
+                <p class="text-gray-500 mb-6 font-medium">情境抉擇挑戰賽</p>
+                
+                <div class="space-y-4 text-left">
+                    <div>
+                        <label class="block text-gray-700 font-bold mb-2">班級 (三位數字，例: 601)</label>
+                        <input type="number" id="class-num" class="w-full border-2 border-teal-200 rounded-xl px-4 py-3 min-h-[48px] focus:outline-none focus:border-teal-500 text-lg" placeholder="請輸入班級">
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 font-bold mb-2">座號 (1~40)</label>
+                        <input type="number" id="seat-num" class="w-full border-2 border-teal-200 rounded-xl px-4 py-3 min-h-[48px] focus:outline-none focus:border-teal-500 text-lg" placeholder="請輸入座號">
+                    </div>
+                    <div id="login-error" class="text-red-500 text-sm font-bold min-h-[20px]"></div>
+                </div>
+                
+                <button onclick="startGame()" class="btn mt-6 w-full bg-teal-500 text-white font-bold text-lg py-3 rounded-xl shadow-md">
+                    開始挑戰 🚀
+                </button>
+            </div>
+        </div>
+
+        <!-- 2. 遊戲畫面 -->
+        <div id="game-screen" class="screen flex-col bg-white">
+            <!-- 頂部資訊列 -->
+            <div class="bg-teal-600 text-white p-4 flex justify-between items-center shadow-md">
+                <div class="font-bold text-lg" id="stage-info">第 1 關 (1/4)</div>
+                <div class="flex items-center gap-4">
+                    <div class="font-bold text-lg bg-teal-700 px-3 py-1 rounded-full flex items-center gap-2">
+                        ⏳ <span id="timer-display">15</span>秒
+                    </div>
+                    <div class="font-bold text-lg tracking-widest" id="lives-display">❤️❤️❤️</div>
+                </div>
+            </div>
+            
+            <!-- 題目區 -->
+            <div class="flex-1 flex flex-col justify-center items-center p-6 bg-slate-50">
+                <div class="w-full max-w-3xl">
+                    <div class="bg-white p-6 md:p-10 rounded-2xl shadow-sm border-2 border-teal-100 mb-8 fade-in" id="question-container">
+                        <p class="text-xl md:text-2xl font-bold leading-relaxed text-gray-800" id="scenario-text">
+                            載入中...
+                        </p>
+                    </div>
+                    
+                    <!-- 選項區 -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4" id="choices-container">
+                        <!-- 按鈕由 JS 動態產生 -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. 過關畫面 -->
+        <div id="stage-clear-screen" class="screen justify-center items-center p-6 bg-green-50 text-center">
+            <div class="fade-in">
+                <div class="text-7xl mb-6">🎉</div>
+                <h2 class="text-3xl font-bold text-green-700 mb-4" id="stage-clear-title">恭喜通過第 1 關！</h2>
+                <p class="text-gray-600 mb-8 text-lg">休息一下，準備迎接下一關的挑戰。</p>
+                <button onclick="nextStage()" class="btn bg-green-600 text-white font-bold text-xl px-10 py-4 rounded-xl shadow-lg">
+                    進入下一關 👉
+                </button>
+            </div>
+        </div>
+
+        <!-- 4. 結束/失敗畫面 -->
+        <div id="game-over-screen" class="screen justify-center items-center p-6 bg-red-50 text-center">
+            <div class="fade-in">
+                <div class="text-7xl mb-6">💔</div>
+                <h2 class="text-3xl font-bold text-red-600 mb-4">生命歸零，挑戰失敗！</h2>
+                <p class="text-gray-600 mb-8 text-lg">資訊安全需要時刻保持警覺喔！</p>
+                <button onclick="resetGame()" class="btn bg-red-500 text-white font-bold text-xl px-10 py-4 rounded-xl shadow-lg">
+                    重新開始 🔄
+                </button>
+            </div>
+        </div>
+
+        <!-- 5. 成果結算畫面 -->
+        <div id="result-screen" class="screen bg-slate-50 flex-col h-full overflow-hidden">
+            <div class="bg-teal-600 text-white p-6 shadow-md text-center shrink-0">
+                <h2 class="text-2xl font-bold mb-2">🏆 挑戰完成 🏆</h2>
+                <div class="text-xl">
+                    <span id="player-info" class="mr-4"></span>
+                    總分：<span id="final-score" class="text-3xl font-extrabold text-yellow-300"></span>
+                </div>
+            </div>
+            
+            <div class="flex-1 overflow-y-auto p-4 md:p-6 space-y-4" id="results-list">
+                <!-- 結算明細由 JS 動態產生 -->
+            </div>
+            
+            <div class="p-4 bg-white border-t border-gray-200 shrink-0 text-center">
+                 <button onclick="resetGame()" class="btn bg-teal-500 text-white font-bold text-lg px-8 py-3 rounded-xl shadow">
+                    返回首頁 🏠
+                </button>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        /* ==========================================
+           資料區 (依據要求格式設計，含12題與關卡節點)
+           ========================================== */
+        const DATA = {
+            start: "q1",
+            scenes: {
+                // 第一關 (4題)
+                q1: {
+                    text: "為了完成學校報告，你在網路上找到別人拍攝的精美照片。",
+                    choices: [
+                        { label: "先取得作者同意才使用", next: "q2", correct: true, result: "尊重他人並保護著作權" },
+                        { label: "直接下載貼到自己的報告中", next: "q2", correct: false, result: "可能侵犯他人著作權而觸法" }
+                    ]
+                },
+                q2: {
+                    text: "收到手機簡訊，說你有一個包裹地址錯誤，並附上查詢連結。",
+                    choices: [
+                        { label: "不隨意點擊來路不明的網址", next: "q3", correct: true, result: "保護個人資料與設備安全" },
+                        { label: "直接點擊連結並填寫資料", next: "q3", correct: false, result: "可能落入詐騙陷阱，導致個資遭盜用" }
+                    ]
+                },
+                q3: {
+                    text: "在網路遊戲裡遇到不認識的網友，對方一直詢問你的真實姓名和住址。",
+                    choices: [
+                        { label: "拒絕提供並提高警覺", next: "q4", correct: true, result: "保護隱私，避免個人資料外洩" },
+                        { label: "為了交朋友馬上告訴對方", next: "q4", correct: false, result: "輕信陌生人說法，容易落入詐騙陷阱" }
+                    ]
+                },
+                q4: {
+                    text: "看到網路新聞報導某個你不喜歡的人，你想在底下留言。",
+                    choices: [
+                        { label: "理性看待，不隨意謾罵", next: "stage2", correct: true, result: "共同創造安全的網路使用環境" },
+                        { label: "隨意留下辱罵的字眼來發洩", next: "stage2", correct: false, result: "可能構成不當言論，須負起法律責任" }
+                    ]
+                },
+                
+                // 第二關節點
+                stage2: { isStageClear: true, stageNum: 1, next: "q5" },
+                
+                // 第二關 (4題)
+                q5: {
+                    text: "想要買一件新衣服，但今天外面下大雨不想出門逛街。",
+                    choices: [
+                        { label: "透過網路平臺購物", next: "q6", correct: true, result: "享受資訊科技突破空間限制的便利" },
+                        { label: "堅持要親自前往實體商店購買", next: "q6", correct: false, result: "這是過去主要依賴人力的生活方式" }
+                    ]
+                },
+                q6: {
+                    text: "朋友透過網路傳來一個不知名的檔案，說下載後會有驚喜。",
+                    choices: [
+                        { label: "先確認檔案來源與安全性", next: "q7", correct: true, result: "避免設備遭惡意入侵" },
+                        { label: "馬上點選下載來看看", next: "q7", correct: false, result: "可能使手機或電腦被植入病毒" }
+                    ]
+                },
+                q7: {
+                    text: "在網路上看到一篇很有趣的文章，想轉傳到家人的群組。",
+                    choices: [
+                        { label: "確認來源並取得同意才分享", next: "q8", correct: true, result: "尊重創作者的權益與規範" },
+                        { label: "未經同意直接複製轉發", next: "q8", correct: false, result: "可能侵害他人的著作權" }
+                    ]
+                },
+                q8: {
+                    text: "放假時，你想跟同學聯絡感情。",
+                    choices: [
+                        { label: "約出來見面聊天或一起去運動", next: "stage3", correct: true, result: "維持真實的人際互動，避免溝通困難" },
+                        { label: "只躲在家裡傳訊息，完全不出門", next: "stage3", correct: false, result: "過度依賴科技可能產生孤獨等社會問題" }
+                    ]
+                },
+
+                // 第三關節點
+                stage3: { isStageClear: true, stageNum: 2, next: "q9" },
+
+                // 第三關 (4題)
+                q9: {
+                    text: "晚上躺在床上準備睡覺，發現客廳的電燈忘記關了。",
+                    choices: [
+                        { label: "利用手機App遠端控制家電", next: "q10", correct: true, result: "發揮現代資訊科技帶來的便利" },
+                        { label: "親自下床走去客廳關燈", next: "q10", correct: false, result: "傳統的生活方式，生活事物多靠人力完成" }
+                    ]
+                },
+                q10: {
+                    text: "面對網路上層出不窮的詐騙與駭客入侵問題，政府應該怎麼做？",
+                    choices: [
+                        { label: "制定資通安全管理法等法規", next: "q11", correct: true, result: "規範合理使用，嚇阻違法行為" },
+                        { label: "只要求民眾自己小心就好", next: "q11", correct: false, result: "缺乏法律規範，難以維護安全的環境" }
+                    ]
+                },
+                q11: {
+                    text: "你發現網路上有許多人盜用他人的圖文影片來營利。",
+                    choices: [
+                        { label: "支持正版影音，不下載盜版內容", next: "q12", correct: true, result: "遵守相關法規，維護創作者權益" },
+                        { label: "覺得免費看很好，幫忙大量分享", next: "q12", correct: false, result: "助長違法行為，忽略對他人的尊重" }
+                    ]
+                },
+                q12: {
+                    text: "想要查詢上課需要的資料，但圖書館已經關門了。",
+                    choices: [
+                        { label: "利用網路搜尋引擎查找資料", next: "end1", correct: true, result: "突破時間與空間的限制，吸收資訊更便利" },
+                        { label: "等到明天圖書館開門才能查", next: "end1", correct: false, result: "沒有善用資訊科技帶來的便利" }
+                    ]
+                },
+
+                // 結局節點
+                end1: { text: "結局說明", end: true }
+            }
+        };
+
+        /* ==========================================
+           設定與邏輯區
+           ========================================== */
+        const MAX_LIVES = 3;
+        const TIME_LIMIT = 15;
+        
+        let classId = "";
+        let seatId = "";
+        let currentSceneKey = "";
+        let currentScene = null;
+        
+        let score = 0;
+        let lives = MAX_LIVES;
+        let timerInterval = null;
+        let timeLeft = TIME_LIMIT;
+        
+        let questionCount = 0;
+        let answersRecord = [];
+        let pendingNextScene = "";
+
+        // 工具：洗牌陣列 (避免正確答案總是在同一個位置)
+        function shuffleArray(array) {
+            const arr = [...array];
+            for (let i = arr.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [arr[i], arr[j]] = [arr[j], arr[i]];
+            }
+            return arr;
+        }
+
+        // 切換畫面
+        function switchScreen(screenId) {
+            document.querySelectorAll('.screen').forEach(el => el.classList.remove('active'));
+            document.getElementById(screenId).classList.add('active');
+        }
+
+        // 開始遊戲 (驗證輸入)
+        function startGame() {
+            const cInput = document.getElementById('class-num').value.trim();
+            const sInput = document.getElementById('seat-num').value.trim();
+            const errDiv = document.getElementById('login-error');
+            
+            if (!/^[1-9]\d{2}$/.test(cInput)) {
+                errDiv.innerText = "⚠️ 班級格式錯誤 (請輸入三位數字，第一碼1~9)";
+                return;
+            }
+            const sNum = parseInt(sInput, 10);
+            if (isNaN(sNum) || sNum < 1 || sNum > 40) {
+                errDiv.innerText = "⚠️ 座號格式錯誤 (請輸入 1~40)";
+                return;
+            }
+            
+            errDiv.innerText = "";
+            classId = cInput;
+            seatId = sInput;
+            
+            // 初始化狀態
+            score = 0;
+            lives = MAX_LIVES;
+            answersRecord = [];
+            questionCount = 0;
+            
+            currentSceneKey = DATA.start;
+            loadScene(currentSceneKey);
+        }
+
+        // 載入場景
+        function loadScene(key) {
+            currentSceneKey = key;
+            currentScene = DATA.scenes[key];
+            
+            // 若到達結局
+            if (currentScene.end) {
+                showResult();
+                return;
+            }
+            
+            // 若為關卡結算點
+            if (currentScene.isStageClear) {
+                pendingNextScene = currentScene.next;
+                document.getElementById('stage-clear-title').innerText = `恭喜通過第 ${currentScene.stageNum} 關！`;
+                switchScreen('stage-clear-screen');
+                return;
+            }
+
+            // 否則為一般題目
+            questionCount++;
+            setupGameUI();
+            switchScreen('game-screen');
+            startTimer();
+        }
+
+        // 進入下一關
+        function nextStage() {
+            loadScene(pendingNextScene);
+        }
+
+        // 重新開始
+        function resetGame() {
+            document.getElementById('class-num').value = '';
+            document.getElementById('seat-num').value = '';
+            switchScreen('login-screen');
+        }
+
+        // 設定遊戲畫面UI
+        function setupGameUI() {
+            // 計算關卡與題號：每關4題
+            const stage = Math.ceil(questionCount / 4);
+            const qInStage = ((questionCount - 1) % 4) + 1;
+            document.getElementById('stage-info').innerText = `第 ${stage} 關 (${qInStage}/4)`;
+            
+            updateLivesUI();
+            
+            // 替換題目
+            const qContainer = document.getElementById('question-container');
+            qContainer.classList.remove('fade-in');
+            void qContainer.offsetWidth; // trigger reflow
+            qContainer.classList.add('fade-in');
+            
+            document.getElementById('scenario-text').innerText = currentScene.text;
+            
+            // 建立選項 (隨機排序)
+            const choicesContainer = document.getElementById('choices-container');
+            choicesContainer.innerHTML = '';
+            
+            const shuffledChoices = shuffleArray(currentScene.choices);
+            
+            shuffledChoices.forEach(choice => {
+                const btn = document.createElement('button');
+                btn.className = "btn w-full bg-teal-100 hover:bg-teal-200 text-teal-900 border-2 border-teal-300 font-bold text-lg md:text-xl p-4 rounded-xl shadow-sm text-left flex items-center";
+                btn.innerHTML = `<span class="mr-3 text-2xl">👉</span><span>${choice.label}</span>`;
+                btn.onclick = () => handleChoice(choice);
+                choicesContainer.appendChild(btn);
+            });
+        }
+
+        // 更新生命值顯示
+        function updateLivesUI() {
+            let hearts = "";
+            for(let i=0; i<MAX_LIVES; i++) {
+                hearts += i < lives ? "❤️" : "🤍";
+            }
+            document.getElementById('lives-display').innerText = hearts;
+        }
+
+        // 倒數計時
+        function startTimer() {
+            clearInterval(timerInterval);
+            timeLeft = TIME_LIMIT;
+            document.getElementById('timer-display').innerText = timeLeft;
+            
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                document.getElementById('timer-display').innerText = timeLeft;
+                if (timeLeft <= 0) {
+                    clearInterval(timerInterval);
+                    handleTimeout();
+                }
+            }, 1000);
+        }
+
+        // 處理超時
+        function handleTimeout() {
+            lives--;
+            updateLivesUI();
+            
+            answersRecord.push({
+                qNum: questionCount,
+                text: currentScene.text,
+                userChoice: "⚠️ 超時未作答",
+                isCorrect: false,
+                time: TIME_LIMIT,
+                scoreEarned: 0,
+                result: "請在時間內做出選擇！"
+            });
+
+            checkStatus(currentScene.choices[0].next); // 預設走第一個選項的next
+        }
+
+        // 處理玩家選擇
+        function handleChoice(choiceObj) {
+            clearInterval(timerInterval);
+            const timeTaken = TIME_LIMIT - timeLeft;
+            let earned = 0;
+            
+            if (choiceObj.correct) {
+                earned = 10;
+                if (timeTaken <= 5) earned += 5; // 5秒內加5分
+            } else {
+                lives--;
+            }
+            
+            score += earned;
+            
+            // 紀錄作答
+            answersRecord.push({
+                qNum: questionCount,
+                text: currentScene.text,
+                userChoice: choiceObj.label,
+                isCorrect: choiceObj.correct,
+                time: timeTaken,
+                scoreEarned: earned,
+                result: choiceObj.result
+            });
+            
+            updateLivesUI();
+            checkStatus(choiceObj.next);
+        }
+
+        // 檢查生命值狀態並決定去向
+        function checkStatus(nextSceneKey) {
+            if (lives <= 0) {
+                setTimeout(() => switchScreen('game-over-screen'), 300);
+            } else {
+                // 短暫延遲讓玩家看到按鈕點擊效果
+                setTimeout(() => loadScene(nextSceneKey), 200);
+            }
+        }
+
+        // 顯示結算畫面
+        function showResult() {
+            document.getElementById('player-info').innerText = `${classId}班 ${seatId}號`;
+            document.getElementById('final-score').innerText = score;
+            
+            const listContainer = document.getElementById('results-list');
+            listContainer.innerHTML = '';
+            
+            answersRecord.forEach(ans => {
+                const card = document.createElement('div');
+                card.className = `p-4 rounded-xl shadow border-l-8 ${ans.isCorrect ? 'bg-white border-green-500' : 'bg-red-50 border-red-500'}`;
+                
+                const statusIcon = ans.isCorrect ? '<span class="text-green-600 font-bold">✅ 答對</span>' : '<span class="text-red-600 font-bold">❌ 答錯</span>';
+                
+                card.innerHTML = `
+                    <div class="mb-2 text-gray-800 font-bold">Q${ans.qNum}. ${ans.text}</div>
+                    <div class="text-sm text-gray-600 mb-2">你的選擇：<span class="${ans.isCorrect ? 'text-teal-700' : 'text-red-600'} font-semibold">${ans.userChoice}</span></div>
+                    <div class="bg-gray-100 p-2 rounded text-sm text-gray-700 mb-2">
+                        💡 <strong>說明：</strong>${ans.result}
+                    </div>
+                    <div class="flex justify-between items-center text-sm border-t border-gray-200 pt-2 mt-2">
+                        <div>${statusIcon} (花費 ${ans.time} 秒)</div>
+                        <div class="font-bold text-yellow-600">獲得 ${ans.scoreEarned} 分</div>
+                    </div>
+                `;
+                listContainer.appendChild(card);
+            });
+            
+            switchScreen('result-screen');
+        }
+
+        // 初始設定防呆
+        window.onload = () => {
+            switchScreen('login-screen');
+        };
+    </script>
+</body>
+</html>
